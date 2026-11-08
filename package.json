@@ -1,0 +1,29 @@
+{
+  "name": "db3513-sandbox",
+  "version": "1.0.0",
+  "description": "A daily shortlist of three movies, for one person or a blend of two, built from Letterboxd history and limited to the streaming services you already pay for.",
+  "homepage": "https://github.com/demarsberhe-nyu/db3513-sandbox#readme",
+  "bugs": {
+    "url": "https://github.com/demarsberhe-nyu/db3513-sandbox/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/demarsberhe-nyu/db3513-sandbox.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "server/index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "dev": "node --env-file-if-exists=.env --watch server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
