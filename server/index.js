@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const { buildProfile, summarizeProfile } = require('./letterboxd');
+const { parseNetflixHistory } = require('./netflix');
 const { loadProfiles, saveProfiles } = require('./store');
 
 const PORT = process.env.PORT || 3000;
@@ -69,6 +70,31 @@ app.post('/api/profiles/:slot', upload.array('files'), (req, res) => {
 
   const profiles = loadProfiles();
   profiles[slot] = profile;
+  saveProfiles(profiles);
+  res.json({ profiles: summarizeAll(profiles) });
+});
+
+app.post('/api/profiles/:slot/netflix', upload.single('file'), (req, res) => {
+  const slot = parseSlot(req, res);
+  if (slot === null) return;
+
+  const profiles = loadProfiles();
+  if (!profiles[slot]) {
+    res.status(404).json({ error: 'Add a Letterboxd export for this person first.' });
+    return;
+  }
+  if (!req.file) {
+    res.status(400).json({ error: 'Choose your NetflixViewingHistory.csv file first.' });
+    return;
+  }
+
+  try {
+    profiles[slot].netflixTitles = parseNetflixHistory(req.file.buffer.toString('utf8'));
+  } catch (error) {
+    res.status(400).json({ error: `Couldn't read that file. ${error.message}` });
+    return;
+  }
+
   saveProfiles(profiles);
   res.json({ profiles: summarizeAll(profiles) });
 });
