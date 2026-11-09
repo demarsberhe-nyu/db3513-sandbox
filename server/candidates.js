@@ -3,6 +3,7 @@ const { normalizeTitle } = require('./netflix');
 
 const TOP_RATED_PER_PERSON = 15;
 const MAX_CANDIDATES_CHECKED = 100;
+const CHECKS_RESERVED_FOR_RECOMMENDATIONS = 40;
 const MAX_TMDB_REQUESTS_AT_ONCE = 8;
 
 const REGIONS = ['US', 'CA', 'GB', 'AU'];
@@ -59,9 +60,24 @@ function createWatchedFilter(people) {
   return { isWatched, excluded };
 }
 
-function byPriority(a, b) {
-  const onWatchlist = (film) => film.sources.some((source) => source.type === 'watchlist');
-  return onWatchlist(b) - onWatchlist(a) || b.sources.length - a.sources.length;
+function isOnWatchlist(film) {
+  return film.sources.some((source) => source.type === 'watchlist');
+}
+
+function bySourceCount(a, b) {
+  return b.sources.length - a.sources.length;
+}
+
+// A long watchlist can't use up every check, or taste-based picks never get looked at.
+// Whichever side has too few films passes its unused checks to the other.
+function chooseFilmsToCheck(pool) {
+  const sorted = [...pool].sort(bySourceCount);
+  const watchlist = sorted.filter(isOnWatchlist);
+  const recommended = sorted.filter((film) => !isOnWatchlist(film));
+
+  const reserved = Math.min(CHECKS_RESERVED_FOR_RECOMMENDATIONS, recommended.length);
+  const watchlistChecks = watchlist.slice(0, MAX_CANDIDATES_CHECKED - reserved);
+  return [...watchlistChecks, ...recommended.slice(0, MAX_CANDIDATES_CHECKED - watchlistChecks.length)];
 }
 
 async function buildCandidates({ profiles, serviceIds, region, tmdb }) {
@@ -108,7 +124,7 @@ async function buildCandidates({ profiles, serviceIds, region, tmdb }) {
     }
   });
 
-  const toCheck = [...pool.values()].sort(byPriority).slice(0, MAX_CANDIDATES_CHECKED);
+  const toCheck = chooseFilmsToCheck(pool.values());
   const allDetails = await mapWithLimit(toCheck, MAX_TMDB_REQUESTS_AT_ONCE, (film) =>
     tmdb.getDetails(film.id),
   );
