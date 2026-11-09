@@ -3,19 +3,23 @@ const express = require('express');
 const multer = require('multer');
 const { buildProfile, summarizeProfile } = require('./letterboxd');
 const { parseNetflixHistory } = require('./netflix');
-const { loadProfiles, saveProfiles } = require('./store');
+const { loadProfiles, saveProfiles, deleteExpiredSessions } = require('./store');
+const { withSession, SESSION_LIFETIME_MS } = require('./sessions');
 const { createTmdbClient } = require('./tmdb');
 const { buildCandidates, SERVICES, REGIONS } = require('./candidates');
 
 const PORT = process.env.PORT || 3000;
 const MAX_NAME_LENGTH = 40;
+const IS_PUBLIC = process.env.PUBLIC_DEPLOY === 'true';
+const ONE_MINUTE_MS = 60 * 1000;
+const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
 
 const app = express();
 
 // Uploads are held in memory just long enough to read them.
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024, files: 10 },
+  limits: { fileSize: 5 * 1024 * 1024, files: 10 },
 });
 
 // Everything in public/ is sent to the browser, so secrets must never go there.
@@ -33,6 +37,31 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+if (IS_PUBLIC) app.use(['/api/profiles', '/api/candidates'], withSession);
+
+// One counter for the whole app, which caps the load no matter who is sending.
+function limitPerMinute(maxRequests) {
+  let windowStart = 0;
+  let count = 0;
+
+  return (req, res, next) => {
+    const now = Date.now();
+    if (now - windowStart >= ONE_MINUTE_MS) {
+      windowStart = now;
+      count = 0;
+    }
+    count += 1;
+    if (count > maxRequests) {
+      res.status(429).json({ error: 'The app is busy right now. Try again in a minute.' });
+      return;
+    }
+    next();
+  };
+}
+
+const limitUploads = limitPerMinute(60);
+const limitSearches = limitPerMinute(20);
+
 function summarizeAll(profiles) {
   return profiles.map((profile) => (profile ? summarizeProfile(profile) : null));
 }
@@ -45,10 +74,10 @@ function parseSlot(req, res) {
 }
 
 app.get('/api/profiles', (req, res) => {
-  res.json({ profiles: summarizeAll(loadProfiles()) });
+  res.json({ profiles: summarizeAll(loadProfiles(req.sessionId)) });
 });
 
-app.post('/api/profiles/:slot', upload.array('files'), (req, res) => {
+app.post('/api/profiles/:slot', limitUploads, upload.array('files'), (req, res) => {
   const slot = parseSlot(req, res);
   if (slot === null) return;
 
@@ -70,17 +99,17 @@ app.post('/api/profiles/:slot', upload.array('files'), (req, res) => {
     return;
   }
 
-  const profiles = loadProfiles();
+  const profiles = loadProfiles(req.sessionId);
   profiles[slot] = profile;
-  saveProfiles(profiles);
+  saveProfiles(profiles, req.sessionId);
   res.json({ profiles: summarizeAll(profiles) });
 });
 
-app.post('/api/profiles/:slot/netflix', upload.single('file'), (req, res) => {
+app.post('/api/profiles/:slot/netflix', limitUploads, upload.single('file'), (req, res) => {
   const slot = parseSlot(req, res);
   if (slot === null) return;
 
-  const profiles = loadProfiles();
+  const profiles = loadProfiles(req.sessionId);
   if (!profiles[slot]) {
     res.status(404).json({ error: 'Add a Letterboxd export for this person first.' });
     return;
@@ -97,7 +126,7 @@ app.post('/api/profiles/:slot/netflix', upload.single('file'), (req, res) => {
     return;
   }
 
-  saveProfiles(profiles);
+  saveProfiles(profiles, req.sessionId);
   res.json({ profiles: summarizeAll(profiles) });
 });
 
@@ -105,9 +134,9 @@ app.delete('/api/profiles/:slot', (req, res) => {
   const slot = parseSlot(req, res);
   if (slot === null) return;
 
-  const profiles = loadProfiles();
+  const profiles = loadProfiles(req.sessionId);
   profiles[slot] = null;
-  saveProfiles(profiles);
+  saveProfiles(profiles, req.sessionId);
   res.json({ profiles: summarizeAll(profiles) });
 });
 
@@ -118,9 +147,9 @@ app.get('/api/options', (req, res) => {
   });
 });
 
-app.post('/api/candidates', express.json(), async (req, res) => {
+app.post('/api/candidates', limitSearches, express.json(), async (req, res) => {
   const { services: serviceIds, region } = req.body ?? {};
-  const profiles = loadProfiles();
+  const profiles = loadProfiles(req.sessionId);
 
   if (!profiles.some(Boolean)) {
     res.status(400).json({ error: 'Add a Letterboxd export first.' });
@@ -158,7 +187,16 @@ app.use((error, req, res, next) => {
   next(error);
 });
 
-// 127.0.0.1 means only this laptop can reach the app.
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`The Shortlist is running at http://localhost:${PORT}`);
-});
+// 127.0.0.1 means only this laptop can reach the app. The public host needs 0.0.0.0.
+if (require.main === module) {
+  app.listen(PORT, IS_PUBLIC ? '0.0.0.0' : '127.0.0.1', () => {
+    console.log(`The Shortlist is running on port ${PORT}`);
+  });
+
+  if (IS_PUBLIC) {
+    deleteExpiredSessions(SESSION_LIFETIME_MS);
+    setInterval(() => deleteExpiredSessions(SESSION_LIFETIME_MS), ONE_HOUR_MS);
+  }
+}
+
+module.exports = app;
