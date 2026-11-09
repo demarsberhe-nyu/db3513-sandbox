@@ -8,17 +8,49 @@
 </head>
 <body>
   <main class="container">
-    <p class="eyebrow">Tonight's Three</p>
+    <p class="eyebrow">Setup</p>
     <h1>The Shortlist</h1>
-    <p class="tagline">Hello. Three movies, on the services you already pay for.</p>
+    <p class="tagline">Three movies, on the services you already pay for.</p>
 
-    <ul class="status" aria-live="polite">
-      <li><span>Server</span><span id="status-server">Checking…</span></li>
-      <li><span>TMDB token</span><span id="status-tmdb">Checking…</span></li>
-      <li><span>Anthropic key</span><span id="status-anthropic">Checking…</span></li>
-      <li><span>Anthropic model</span><span id="status-model">Checking…</span></li>
-    </ul>
+    <p class="mode" id="mode" aria-live="polite"></p>
+    <div id="people"></div>
   </main>
+
+  <template id="upload-template">
+    <section class="person">
+      <h2 data-field="heading"></h2>
+      <form>
+        <label>
+          Name
+          <input type="text" name="name" maxlength="40" autocomplete="off" required />
+        </label>
+        <label>
+          Letterboxd export (the ZIP, or ratings, watched and watchlist CSVs)
+          <input type="file" name="files" accept=".zip,.csv" multiple required />
+        </label>
+        <p class="error" role="alert" data-field="error" hidden></p>
+        <button type="submit">Add</button>
+      </form>
+    </section>
+  </template>
+
+  <template id="profile-template">
+    <section class="person">
+      <div class="person-header">
+        <h2 data-field="heading"></h2>
+        <button type="button" class="quiet" data-field="remove">Remove</button>
+      </div>
+      <dl class="counts">
+        <div><dt>Watchlist</dt><dd data-field="watchlist"></dd></div>
+        <div><dt>Watched</dt><dd data-field="watched"></dd></div>
+        <div><dt>Rated</dt><dd data-field="rated"></dd></div>
+      </dl>
+      <h3>Top-rated films</h3>
+      <ol class="films" data-field="films"></ol>
+      <p class="more" data-field="more" hidden></p>
+    </section>
+  </template>
+
   <script src="app.js"></script>
 </body>
 </html>
