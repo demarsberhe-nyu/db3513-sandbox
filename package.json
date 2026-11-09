@@ -1,7 +1,7 @@
 {
   "name": "db3513-sandbox",
   "version": "1.0.0",
-  "description": "A daily shortlist of three movies, for one person or a blend of two, built from Letterboxd history and limited to the streaming services you already pay for.",
+  "description": "A daily shortlist of five or six movies, for one person or a blend of two, built from Letterboxd history and limited to the streaming services you already pay for.",
   "homepage": "https://github.com/demarsberhe-nyu/db3513-sandbox#readme",
   "bugs": {
     "url": "https://github.com/demarsberhe-nyu/db3513-sandbox/issues"
@@ -24,6 +24,7 @@
     "test": "node --test \"tests/*.test.js\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
     "adm-zip": "^0.6.1",
     "csv-parse": "^7.0.3",
     "express": "^5.3.0",

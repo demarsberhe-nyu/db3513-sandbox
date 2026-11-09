@@ -31,6 +31,14 @@ function rating(name, stars, date = '2026-01-01') {
   return `${date},${name},2001,https://boxd.it/x,${stars}`;
 }
 
+test('rejects a ZIP that would unpack to an oversized file', () => {
+  const zip = new AdmZip();
+  zip.addFile('ratings.csv', Buffer.alloc(21 * 1024 * 1024));
+  const upload = { originalname: 'export.zip', buffer: zip.toBuffer() };
+
+  assert.throws(() => buildProfile('Sam', [upload]), /ratings\.csv is too large/);
+});
+
 test('reads a ZIP export and ignores the deleted/ copies', () => {
   const files = exportFiles({
     ratings: [rating('Alpha', 5)],

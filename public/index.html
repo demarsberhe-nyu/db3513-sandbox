@@ -7,55 +7,160 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="container">
-    <p class="eyebrow">Setup</p>
+  <main class="container" id="container">
     <h1>The Shortlist</h1>
-    <p class="tagline">Three movies, on the services you already pay for.</p>
+    <p class="tagline">Movies picked for you, on the services you already pay for.</p>
 
-    <p class="mode" id="mode" aria-live="polite"></p>
-    <div id="people"></div>
+    <nav aria-label="Progress">
+      <ol class="steps">
+        <li><button type="button" class="step" data-step-link="you"><span class="step-number">1</span>You</button></li>
+        <li><button type="button" class="step" data-step-link="tonight"><span class="step-number">2</span>Preferences</button></li>
+        <li><button type="button" class="step" data-step-link="shortlist"><span class="step-number">3</span>Shortlist</button></li>
+      </ol>
+    </nav>
+
+    <section data-step="you" hidden>
+      <h2 class="step-heading" tabindex="-1">Who's watching?</h2>
+      <div id="people"></div>
+      <button type="button" class="primary-action" id="to-tonight" disabled>Next: choose tonight's mood</button>
+    </section>
+
+    <section data-step="tonight" hidden>
+      <h2 class="step-heading" tabindex="-1">Streaming platforms</h2>
+      <form id="finder-form">
+        <fieldset class="choices">
+          <legend id="services-legend">Your services</legend>
+          <div class="chips" id="service-options"></div>
+        </fieldset>
+        <fieldset class="choices">
+          <legend>What's the mood?</legend>
+          <div class="moods" id="mood-options"></div>
+        </fieldset>
+        <label class="region-field">
+          Region
+          <select name="region" id="region"></select>
+        </label>
+        <p class="hint" id="finder-hint">Pick at least one service to continue.</p>
+        <button type="submit" class="primary-action" id="finder-button" disabled>Build my shortlist</button>
+      </form>
+    </section>
+
+    <section data-step="shortlist" hidden>
+      <div id="loading" hidden>
+        <h2 class="step-heading" tabindex="-1">Building your shortlist</h2>
+        <p class="more" id="loading-status" role="status"></p>
+        <ol class="picks" aria-hidden="true">
+          <li class="pick skeleton"></li>
+          <li class="pick skeleton"></li>
+          <li class="pick skeleton"></li>
+        </ol>
+      </div>
+
+      <div id="failure" hidden>
+        <h2 class="step-heading" tabindex="-1">We couldn't build your shortlist</h2>
+        <p class="error" id="failure-message" role="alert"></p>
+        <div class="actions">
+          <button type="button" id="try-again">Try again</button>
+          <button type="button" class="secondary" data-go-to="tonight">Change my choices</button>
+        </div>
+      </div>
+
+      <div id="results" hidden>
+        <h2 class="step-heading" id="results-heading" tabindex="-1"></h2>
+        <p class="more" id="results-summary"></p>
+        <ol class="picks" id="results-list"></ol>
+        <div class="actions">
+          <button type="button" class="secondary" id="restore-picks" hidden></button>
+          <button type="button" class="secondary" data-go-to="tonight">Change mood</button>
+        </div>
+        <p class="attribution">
+          Streaming availability from <a href="https://www.justwatch.com/" rel="noopener">JustWatch</a>,
+          via TMDB, and it may not be real-time.
+          This product uses the TMDB API but is not endorsed or certified by TMDB.
+        </p>
+      </div>
+    </section>
   </main>
+
+  <div class="toast" id="toast" role="status" hidden>
+    <span id="toast-text"></span>
+    <button type="button" class="quiet" id="toast-action"></button>
+  </div>
 
   <template id="upload-template">
     <section class="person">
-      <h2 data-field="heading"></h2>
+      <h3 class="card-heading" data-field="heading"></h3>
       <form>
         <label>
           Name
           <input type="text" name="name" maxlength="40" autocomplete="off" required />
         </label>
-        <label>
-          Letterboxd export (the ZIP, or ratings, watched and watchlist CSVs)
-          <input type="file" name="files" accept=".zip,.csv" multiple required />
+        <label class="dropzone" data-field="dropzone">
+          <input type="file" name="files" accept=".zip,.csv" multiple required data-field="files" />
+          <span class="dropzone-title">Drop your Letterboxd export here</span>
+          <span class="dropzone-note" data-field="file-names">or click to choose the ZIP file</span>
         </label>
+        <details class="help">
+          <summary>How do I get my Letterboxd export?</summary>
+          <p>On the Letterboxd website, open Settings, go to Data, and choose Export Your Data. You'll get a ZIP file. Upload it as it is.</p>
+        </details>
         <p class="error" role="alert" data-field="error" hidden></p>
         <button type="submit">Add</button>
       </form>
     </section>
   </template>
 
+  <template id="invite-template">
+    <section class="person invite">
+      <div>
+        <h3 class="card-heading">Watching with someone?</h3>
+        <p class="more">Add a second person to blend your tastes.</p>
+      </div>
+      <button type="button" class="secondary" data-field="add">Add a person</button>
+    </section>
+  </template>
+
   <template id="profile-template">
     <section class="person">
       <div class="person-header">
-        <h2 data-field="heading"></h2>
+        <h3 class="card-heading" data-field="heading"></h3>
         <button type="button" class="quiet" data-field="remove">Remove</button>
       </div>
-      <dl class="counts">
-        <div><dt>Watchlist</dt><dd data-field="watchlist"></dd></div>
-        <div><dt>Watched</dt><dd data-field="watched"></dd></div>
-        <div><dt>Rated</dt><dd data-field="rated"></dd></div>
-      </dl>
-      <h3>Top-rated films</h3>
-      <ol class="films" data-field="films"></ol>
-      <p class="more" data-field="more" hidden></p>
-      <h3>Netflix history (optional)</h3>
-      <p class="more" data-field="netflix-status"></p>
-      <p class="error" role="alert" data-field="error" hidden></p>
-      <label class="file-button">
-        <span data-field="netflix-label"></span>
-        <input type="file" accept=".csv" data-field="netflix-file" />
-      </label>
+      <p class="more" data-field="summary"></p>
+      <details class="help">
+        <summary>Top-rated films</summary>
+        <ol class="films" data-field="films"></ol>
+        <p class="more" data-field="more" hidden></p>
+      </details>
+      <details class="help">
+        <summary>Netflix history (optional)</summary>
+        <p class="more" data-field="netflix-status"></p>
+        <p class="more">On Netflix, open Account, choose your profile, open Viewing activity, then Download all.</p>
+        <p class="error" role="alert" data-field="error" hidden></p>
+        <label class="file-button">
+          <span data-field="netflix-label"></span>
+          <input type="file" accept=".csv" data-field="netflix-file" />
+        </label>
+      </details>
     </section>
+  </template>
+
+  <template id="pick-template">
+    <li class="pick">
+      <img class="pick-poster" data-field="poster" alt="" hidden />
+      <div class="pick-details">
+        <p class="pick-label" data-field="label" hidden></p>
+        <h3 class="pick-title" data-field="title"></h3>
+        <p class="film-note" data-field="facts"></p>
+        <p class="pick-why" data-field="why"></p>
+        <details class="help">
+          <summary>More about this film</summary>
+          <p class="film-note" data-field="genres"></p>
+          <p class="more" data-field="overview"></p>
+        </details>
+        <button type="button" class="quiet veto" data-field="veto">Not tonight</button>
+      </div>
+    </li>
   </template>
 
   <script src="app.js"></script>

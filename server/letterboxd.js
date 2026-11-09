@@ -4,6 +4,7 @@ const { parse } = require('csv-parse/sync');
 
 const TOP_RATED_CUTOFF = 4;
 const TOP_RATED_MINIMUM = 10;
+const MAX_UNZIPPED_BYTES = 20 * 1024 * 1024;
 
 // Confirmed against a real Letterboxd export on 2026-11-08.
 const EXPECTED_COLUMNS = {
@@ -24,7 +25,10 @@ function collectCsvText(uploads) {
       for (const expectedName of Object.keys(EXPECTED_COLUMNS)) {
         // Top-level entries only, so deleted/ and orphaned/ copies are skipped.
         const entry = zip.getEntry(expectedName);
-        if (entry) csvText[expectedName] = entry.getData().toString('utf8');
+        if (!entry) continue;
+        // A tiny ZIP can unpack to gigabytes, so check before unpacking.
+        if (entry.header.size > MAX_UNZIPPED_BYTES) throw new Error(`${expectedName} is too large.`);
+        csvText[expectedName] = entry.getData().toString('utf8');
       }
     } else if (Object.hasOwn(EXPECTED_COLUMNS, fileName)) {
       csvText[fileName] = upload.buffer.toString('utf8');
