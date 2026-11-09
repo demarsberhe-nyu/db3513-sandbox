@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>[Your Product Name] · Building with AI (Fall 2026)</title>
+  <title>The Shortlist · Building with AI (Fall 2026)</title>
 
   <!-- Week 1: create your PostHog account only.
        Build 2: paste your project's current PostHog web snippet here,
@@ -144,8 +144,8 @@
     <!-- HERO / PRODUCT PITCH -->
     <header>
       <span class="eyebrow">NYU Stern · Building with AI · Fall 2026</span>
-      <h1>[Your Product Name]</h1>
-      <p class="tagline">[One clear sentence: Who is this for, and what painful job does it do for them?]</p>
+      <h1>The Shortlist 🎥</h1>
+      <p class="tagline">This product is for movie watchers who subscribe to multiple streaming services and struggle with choice fatigue when deciding on their next watch.</p>
       <div class="cta-row">
         <a class="btn" href="#live-demo" onclick="window.posthog && posthog.capture('clicked_try_product')">See the Product →</a>
         <a class="btn btn-secondary" href="#prd">Read the Living PRD</a>
@@ -171,21 +171,46 @@
       <p class="meta">Updated every week as we test with real users and learn what works.</p>
 
       <h3>1. Target User & The Job to Be Done</h3>
-      <p><strong>Who is this for?</strong> [Name a specific, reachable person or role you have direct access to.]</p>
-      <p><strong>The painful "Before" workflow:</strong> [How do they do this today, and why is it slow, manual, or broken?]</p>
-      <p><strong>The "After" workflow with this product:</strong> [What does your tool do for them in one sitting?]</p>
+      <p><strong>Who is this for?</strong> Movie/tv show watchers</p>
+      <p><strong>The painful "Before" workflow:</strong> Watching alone: Open Netflix and scrolls, switches to Max, then Hulu. They remember a movie on their Letterboxd watchlist and have to see whether any of their services stream it. After 20 to 30 minutes, user often settles for a rewatch or give up and scroll social media instead.
+      <br />
+      Watching together: The same search happens, but now with two people trading suggestions and vetoing each other's picks. It often takes 30 to 60 minutes and ends with a compromise or taking signficantly longer to get to the match.
+    <br />
+    Why is the manual process slow?
+    <ol>
+      <li>Siloed catalogs. Each streaming app only shows its own titles, so you have to check them one by one.</li>
+      <li>One-person recommendations. Each platform recommends from one profile's history on one service. None can combine two people's tastes.</li>
+      <li>Disconnected watchlists. Letterboxd watchlists sit apart from what's actually streamable tonight.</li>
+      <li>Group watch typically occurs at the end of the day when people are tired</li>
+    </ol>
+    </p>
+      <p><strong>The "After" workflow with this product:</strong>
+      <ol>
+        <li>One-time setup (about 5 minutes): User imports their Letterboxd and streaming platform history and watchlist, then selects their streaming services to build their personal taste profile.</li>
+        <li>Solo night (under 2 minutes): User answers a 10-second mood check-in, such as light or intense? and movie or episode? The app shows their three picks, all on services they already have. Each comes with a trailer and a “why this pick” line. They tap one, and it opens in its streaming app.</li>
+        <li>Group watch (under 2 minutes): User taps “Blend with me.” The app combines each persons profile and shows our taste match score, then Today's Shortlist: picks available on services we both have, each labeled “yours / mine / both.” We each veto one, or use a single daily reroll, and the last title standing opens with one tap.</li>
+      </ol>
+    </p>
 
       <h3>2. Scope & Explicit Non-Goals</h3>
       <ul>
-        <li><strong>In Scope (Core Workflow):</strong> [The 1 main workflow this product does reliably]</li>
-        <li><strong>Out of Scope #1:</strong> [Feature you are deliberately NOT building in 6 weeks]</li>
-        <li><strong>Out of Scope #2:</strong> [Feature you are deliberately NOT building in 6 weeks]</li>
-        <li><strong>Out of Scope #3:</strong> [Feature you are deliberately NOT building in 6 weeks]</li>
+        <li><strong>In Scope (Core Workflow):</strong> Users answer a quick mood check-in and the app shows a shortlist of movie recommendations. Blend will also be available where a shared session will blend multiple profile tastes and provide a shared shortlist. Each pick has a “why this pick” line and a “yours / mine / both” label.</li>
+        <li><strong>Out of Scope #1:</strong>Linking streaming accounts automatically. Netflix, Hulu, and Max don't offer public APIs for watch history, so users upload export files instead of logging in.</li>
+        <li><strong>Out of Scope #2:</strong>TV Shows - Initial product will only have movie recommendations</li>
+        <li><strong>Out of Scope #3:</strong>Feedback: Users can veto picks or reroll once, and they record “loved it / not for me / not tonight” feedback that shapes the next shared shortlist.</li>
       </ul>
 
       <h3>3. How It Works Under the Hood & Riskiest Assumption (Week 2+)</h3>
-      <p><strong>Riskiest Assumption:</strong> [What is the #1 technical or user risk that could sink this product?]</p>
-      <p><strong>Simple Architecture:</strong> [User Input] → [Your App / Server] → [AI Model / Tool] → [Output]</p>
+      <p><strong>Riskiest Assumption:</strong>Users will trust a shortlist of movies enough to pick one and press play, instead of going back to scrolling. If the recommendations feel random the user will go back to scrolling on streaming platforms, resulting in the app further extending the search process.</p>
+      <p><strong>Simple Architecture:</strong>
+        <ol>
+          <li>User Input: LetterboxdOne or two Letterboxd export files (CSV), the streaming services we share, and tonight's mood</li>
+          <li>Your App: App that reads the CSV files, identifies each person's highly rated films and watchlist, builds taste profile for the user, builds movie shortlist using taste profile data + current preferences (TMDB data will narrow down list to only include movies that are available on platforms the user is subscribed to)</li>
+          <li>AI Model / Tool: TMDB API (movie details and where-to-watch data), Claude model to blend both taste profiles with tonight's mood, ranks the candidates, and writes a “why this pick” line</li>
+          <li>Output: Today's Shortlist: Movie cards with posters, the “why” line, trailer, etc.</li>
+        </ol>
+      
+      </p>
 
       <h3>4. Unit Economics & Analytics Snapshot (Updated Weekly)</h3>
       <div class="grid-2">
