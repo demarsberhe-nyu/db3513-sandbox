@@ -137,6 +137,21 @@
       font-size: 13px;
       color: var(--muted);
     }
+    /* Two columns when there is room, one on phones. */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .gallery img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -157,12 +172,17 @@
     <section id="live-demo">
       <h2>Product Showcase (Prototype / Live App / 2-Min Video)</h2>
       <p>
-        <strong>Current Status:</strong> [Build 1: local prototype / Builds 2–4: local app / Build 5: cloud app]<br />
-        <strong>Demo:</strong> [Add a screenshot or GIF now; add the live cloud app URL in Build 5.]
+        <strong>Current Status:</strong> Build 1: local prototype<br />
+        <strong>Demo:</strong>
       </p>
-      <p class="meta">
-        Ask your coding agent to embed a screenshot or GIF of your local prototype for Build 1. Keep this evidence current, then add your cloud app link and two-minute video in Build 5.
-      </p>
+      <div class="gallery">
+        <img src="img/the-shortlist-1.png" width="1813" height="1389" loading="lazy" alt="Step 1, You: a form asking for a name and a Letterboxd export file." />
+        <img src="img/the-shortlist-2.png" width="1501" height="1521" loading="lazy" alt="Step 1 after upload: a profile showing 95 films on the watchlist, 96 watched, 65 rated and 385 Netflix titles read." />
+        <img src="img/the-shortlist-6.png" width="1362" height="1477" loading="lazy" alt="Step 2, Preferences: streaming services selected as chips, mood cards with Light and easy chosen, and a region menu." />
+        <img src="img/the-shortlist-3.png" width="1869" height="1447" loading="lazy" alt="Step 3 while loading: a Building your shortlist heading above three placeholder cards." />
+        <img src="img/the-shortlist-4.png" width="1814" height="1512" loading="lazy" alt="Today's Shortlist: four film cards with posters, streaming service, runtime and a reason for each pick." />
+        <img src="img/the-shortlist-5.png" width="1716" height="1497" loading="lazy" alt="More shortlist cards, one expanded to show genres and an overview, each with a Not tonight button." />
+      </div>
     </section>
 
     <!-- LIVING PRD (Updated every week!) -->
@@ -241,10 +261,10 @@
       <div class="log-entry">
         <h3>Build 1 · Intent.md & Throwaway Prototype (Due Nov 9)</h3>
         <ul>
-          <li><strong>What shipped:</strong> [What you actually built; link your local prototype screenshot or GIF above.]</li>
+          <li><strong>What shipped:</strong>Initial proof of concept and local prototype for the The Shortlist movie recommendation product.</li>
           <li><strong>Things learned with AI:</strong> [What you learned from AI practice and Terminus Episodes 1 and 2.]</li>
           <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
+          <li><strong>Cost & time this week:</strong> 4 hours</li>
         </ul>
       </div>
 
