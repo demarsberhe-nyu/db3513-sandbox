@@ -7,6 +7,9 @@
 secrets.*
 credentials.json
 
+# Personal App Data (Letterboxd exports, profiles, feedback)
+data/
+
 # AI Agent Local State / Logs (keep curated logs in journal/)
 .claude/
 .codex/

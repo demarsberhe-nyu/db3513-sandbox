@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Shortlist</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <p class="eyebrow">Tonight's Three</p>
+    <h1>The Shortlist</h1>
+    <p class="tagline">Hello. Three movies, on the services you already pay for.</p>
+
+    <ul class="status" aria-live="polite">
+      <li><span>Server</span><span id="status-server">Checking…</span></li>
+      <li><span>TMDB token</span><span id="status-tmdb">Checking…</span></li>
+      <li><span>Anthropic key</span><span id="status-anthropic">Checking…</span></li>
+      <li><span>Anthropic model</span><span id="status-model">Checking…</span></li>
+    </ul>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
