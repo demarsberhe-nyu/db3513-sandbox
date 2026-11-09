@@ -1,4 +1,6 @@
 const SLOT_HEADINGS = ['You', 'Second person (optional)'];
+const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w185';
+const FINDER_BUTTON_TEXT = 'Build my shortlist';
 
 const people = document.getElementById('people');
 const mode = document.getElementById('mode');
@@ -6,6 +8,7 @@ const finder = document.getElementById('finder');
 const finderForm = document.getElementById('finder-form');
 const finderButton = document.getElementById('finder-button');
 const serviceOptions = document.getElementById('service-options');
+const moodOptions = document.getElementById('mood-options');
 const region = document.getElementById('region');
 const results = document.getElementById('results');
 const resultsHeading = document.getElementById('results-heading');
@@ -127,40 +130,51 @@ function renderProfile(slot, profile) {
   return section;
 }
 
-function describeSource(source) {
-  return source.type === 'watchlist'
-    ? `On ${source.person}'s watchlist`
-    : `Because ${source.person} loved ${source.because}`;
-}
-
-function renderCandidate(film) {
+function renderPick(pick) {
   const item = document.createElement('li');
   const details = document.createElement('div');
-  const title = document.createElement('span');
-  const services = document.createElement('p');
-  const source = document.createElement('p');
-  const runtime = document.createElement('span');
+  const title = document.createElement('p');
+  const why = document.createElement('p');
+  const facts = document.createElement('p');
 
-  title.textContent = `${film.title} (${film.year})`;
-  services.textContent = film.services.join(', ');
-  services.className = 'film-note';
-  source.textContent = film.sources.slice(0, 2).map(describeSource).join(' · ');
-  source.className = 'film-note';
-  runtime.textContent = film.runtime ? `${film.runtime} min` : '';
-  runtime.className = 'rating';
+  details.className = 'pick-details';
+  title.className = 'pick-title';
+  title.textContent = `${pick.title} (${pick.year})`;
+  why.className = 'pick-why';
+  why.textContent = pick.why;
+  facts.className = 'film-note';
+  facts.textContent = [pick.services.join(', '), pick.runtime && `${pick.runtime} min`]
+    .filter(Boolean)
+    .join(' · ');
+  details.append(title, why, facts);
 
-  details.append(title, services, source);
-  item.append(details, runtime);
+  if (pick.label) {
+    const label = document.createElement('p');
+    label.className = 'pick-label';
+    label.textContent = pick.label;
+    details.prepend(label);
+  }
+
+  if (pick.posterPath) {
+    const poster = document.createElement('img');
+    poster.className = 'pick-poster';
+    poster.src = `${POSTER_BASE_URL}${pick.posterPath}`;
+    poster.alt = `Poster for ${pick.title}`;
+    poster.loading = 'lazy';
+    item.append(poster);
+  }
+
+  item.append(details);
   return item;
 }
 
-function showResults({ candidates, stats }) {
+function showResults({ picks, candidateCount, stats }) {
   const watched = stats.watchedOnLetterboxd + stats.watchedOnNetflix;
-  resultsHeading.textContent = `${candidates.length} candidates`;
-  resultsSummary.textContent =
-    `Checked ${stats.checked} films: ${stats.notAvailable} not on your services. ` +
-    `Skipped ${watched} already watched and ${stats.unmatched} TMDB couldn't match.`;
-  resultsList.replaceChildren(...candidates.map(renderCandidate));
+  resultsHeading.textContent = picks.length > 0 ? "Today's Shortlist" : 'Nothing to pick from tonight';
+  resultsSummary.textContent = picks.length > 0
+    ? `Chosen from ${candidateCount} films on your services. Skipped ${watched} you've already watched.`
+    : `Checked ${stats.checked} films and none are on your services. Try adding another service.`;
+  resultsList.replaceChildren(...picks.map(renderPick));
   results.hidden = false;
 }
 
@@ -179,6 +193,18 @@ async function setUpFinder() {
     return label;
   }));
 
+  moodOptions.replaceChildren(...options.moods.map((mood) => {
+    const label = document.createElement('label');
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'mood';
+    radio.value = mood.id;
+    radio.checked = mood.id === 'either';
+    label.className = 'service';
+    label.append(radio, mood.name);
+    return label;
+  }));
+
   region.replaceChildren(...options.regions.map((code) => new Option(code, code)));
 
   finderForm.addEventListener('submit', async (event) => {
@@ -186,16 +212,17 @@ async function setUpFinder() {
     field(finder, 'error').hidden = true;
     results.hidden = true;
     finderButton.disabled = true;
-    finderButton.textContent = 'Searching… this can take a minute';
+    finderButton.textContent = 'Building your shortlist… this can take a minute';
 
     try {
       const formData = new FormData(finderForm);
-      const reply = await fetch('/api/candidates', {
+      const reply = await fetch('/api/shortlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           services: formData.getAll('services'),
           region: formData.get('region'),
+          mood: formData.get('mood'),
         }),
       });
       const body = await reply.json();
@@ -205,7 +232,7 @@ async function setUpFinder() {
       showError(finder, error.message);
     } finally {
       finderButton.disabled = false;
-      finderButton.textContent = 'Find candidates';
+      finderButton.textContent = FINDER_BUTTON_TEXT;
     }
   });
 }

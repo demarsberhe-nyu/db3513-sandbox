@@ -272,3 +272,32 @@ button.quiet {
   color: var(--muted);
   font-size: 14px;
 }
+
+.picks li {
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.pick-poster {
+  flex: none;
+  width: 72px;
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.pick-details { min-width: 0; }
+
+.pick-label {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pick-title {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.pick-why { margin: 4px 0 0; }

@@ -16,25 +16,29 @@
     <div id="people"></div>
 
     <section class="person" id="finder" hidden>
-      <h2>Find candidates</h2>
+      <h2>Tonight</h2>
       <form id="finder-form">
         <fieldset class="services">
           <legend>Services you share</legend>
           <div id="service-options"></div>
+        </fieldset>
+        <fieldset class="services">
+          <legend>What's the mood?</legend>
+          <div id="mood-options"></div>
         </fieldset>
         <label>
           Region
           <select name="region" id="region"></select>
         </label>
         <p class="error" role="alert" data-field="error" hidden></p>
-        <button type="submit" id="finder-button">Find candidates</button>
+        <button type="submit" id="finder-button">Build my shortlist</button>
       </form>
     </section>
 
     <section class="person" id="results" hidden>
       <h2 id="results-heading"></h2>
       <p class="more" id="results-summary"></p>
-      <ol class="films" id="results-list"></ol>
+      <ol class="films picks" id="results-list"></ol>
       <p class="attribution">
         Streaming availability from <a href="https://www.justwatch.com/" rel="noopener">JustWatch</a>,
         via TMDB, and it may not be real-time.

@@ -16,3 +16,7 @@ services:
       # Render asks for this value when the service is created. It never goes in Git.
       - key: TMDB_API_TOKEN
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-opus-5-5

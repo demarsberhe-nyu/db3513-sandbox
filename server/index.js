@@ -1,18 +1,21 @@
 const path = require('path');
 const express = require('express');
 const multer = require('multer');
+const Anthropic = require('@anthropic-ai/sdk');
 const { buildProfile, summarizeProfile } = require('./letterboxd');
 const { parseNetflixHistory } = require('./netflix');
 const { loadProfiles, saveProfiles, deleteExpiredSessions } = require('./store');
 const { withSession, SESSION_LIFETIME_MS } = require('./sessions');
 const { createTmdbClient } = require('./tmdb');
 const { buildCandidates, SERVICES, REGIONS } = require('./candidates');
+const { buildShortlist, MOODS } = require('./shortlist');
 
 const PORT = process.env.PORT || 3000;
 const MAX_NAME_LENGTH = 40;
 const IS_PUBLIC = process.env.PUBLIC_DEPLOY === 'true';
 const ONE_MINUTE_MS = 60 * 1000;
 const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 
 const app = express();
 
@@ -37,30 +40,32 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-if (IS_PUBLIC) app.use(['/api/profiles', '/api/candidates'], withSession);
+if (IS_PUBLIC) app.use(['/api/profiles', '/api/shortlist'], withSession);
 
 // One counter for the whole app, which caps the load no matter who is sending.
-function limitPerMinute(maxRequests) {
+function limitRequests(maxRequests, windowMs) {
   let windowStart = 0;
   let count = 0;
 
   return (req, res, next) => {
     const now = Date.now();
-    if (now - windowStart >= ONE_MINUTE_MS) {
+    if (now - windowStart >= windowMs) {
       windowStart = now;
       count = 0;
     }
     count += 1;
     if (count > maxRequests) {
-      res.status(429).json({ error: 'The app is busy right now. Try again in a minute.' });
+      res.status(429).json({ error: 'The app is busy right now. Try again later.' });
       return;
     }
     next();
   };
 }
 
-const limitUploads = limitPerMinute(60);
-const limitSearches = limitPerMinute(20);
+const limitUploads = limitRequests(60, ONE_MINUTE_MS);
+const limitSearches = limitRequests(20, ONE_MINUTE_MS);
+// Every shortlist is a paid Claude call, so this caps what the public site can spend.
+const limitDailyShortlists = limitRequests(50, ONE_DAY_MS);
 
 function summarizeAll(profiles) {
   return profiles.map((profile) => (profile ? summarizeProfile(profile) : null));
@@ -144,11 +149,12 @@ app.get('/api/options', (req, res) => {
   res.json({
     services: SERVICES.map(({ id, name }) => ({ id, name })),
     regions: REGIONS,
+    moods: MOODS,
   });
 });
 
-app.post('/api/candidates', limitSearches, express.json(), async (req, res) => {
-  const { services: serviceIds, region } = req.body ?? {};
+app.post('/api/shortlist', limitSearches, limitDailyShortlists, express.json(), async (req, res) => {
+  const { services: serviceIds, region, mood } = req.body ?? {};
   const profiles = loadProfiles(req.sessionId);
 
   if (!profiles.some(Boolean)) {
@@ -163,14 +169,30 @@ app.post('/api/candidates', limitSearches, express.json(), async (req, res) => {
     res.status(400).json({ error: 'Pick a region from the list.' });
     return;
   }
+  if (!MOODS.some(({ id }) => id === mood)) {
+    res.status(400).json({ error: "Pick tonight's mood." });
+    return;
+  }
   if (!process.env.TMDB_API_TOKEN) {
     res.status(503).json({ error: 'TMDB_API_TOKEN is not set in .env yet.' });
+    return;
+  }
+  if (!process.env.ANTHROPIC_API_KEY || !process.env.ANTHROPIC_MODEL) {
+    res.status(503).json({ error: 'ANTHROPIC_API_KEY and ANTHROPIC_MODEL must be set in .env.' });
     return;
   }
 
   const tmdb = createTmdbClient(process.env.TMDB_API_TOKEN);
   try {
-    res.json(await buildCandidates({ profiles, serviceIds, region, tmdb }));
+    const { candidates, stats } = await buildCandidates({ profiles, serviceIds, region, tmdb });
+    const picks = await buildShortlist({
+      candidates,
+      people: profiles.filter(Boolean),
+      mood,
+      model: process.env.ANTHROPIC_MODEL,
+      claude: new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }),
+    });
+    res.json({ picks, candidateCount: candidates.length, stats });
   } catch (error) {
     res.status(502).json({ error: error.message });
   } finally {
