@@ -12,10 +12,14 @@ const CANDIDATES = [film(1), film(2), film(3), film(4)];
 const SAM = { name: 'Sam', topRated: [{ name: 'Alpha', year: '1999', rating: 5, date: '2026-01-01', uri: 'x' }] };
 const ALEX = { name: 'Alex', topRated: [] };
 
+function slots(picks) {
+  return Object.fromEntries(picks.map((pick, index) => [['first', 'second', 'third'][index], pick]));
+}
+
 function reply(picks, overrides = {}) {
   return {
     stop_reason: 'end_turn',
-    content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: JSON.stringify({ picks }) }],
+    content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: JSON.stringify(slots(picks)) }],
     ...overrides,
   };
 }
@@ -27,8 +31,9 @@ function fakeClaude(response) {
       messages: {
         async create(request) {
           claude.requests.push(request);
-          if (response instanceof Error) throw response;
-          return response;
+          const next = Array.isArray(response) ? response.shift() : response;
+          if (next instanceof Error) throw next;
+          return next;
         },
       },
     },
@@ -71,6 +76,7 @@ test('sends the mood, taste and candidates, and asks for structured output', asy
   assert.match(content, /exactly 3 films/);
   assert.equal(request.model, 'test-model');
   assert.equal(request.output_config.format.type, 'json_schema');
+  assert.deepEqual(request.output_config.format.schema.required, ['first', 'second', 'third']);
   assert.equal(sent.mood, MOODS.find(({ id }) => id === 'light').name);
   assert.deepEqual(sent.viewers[0].topRated, [{ name: 'Alpha', year: '1999', rating: 5 }]);
   assert.deepEqual(sent.candidates.map(({ id }) => id), [1, 2, 3, 4]);
@@ -110,6 +116,7 @@ test('asks for fewer picks when there are fewer than three candidates', async ()
 
   assert.equal(picks.length, 1);
   assert.match(claude.requests[0].system, /pick the 1 /);
+  assert.deepEqual(claude.requests[0].output_config.format.schema.required, ['first']);
 });
 
 test('does not call Claude when there are no candidates', async () => {
@@ -117,6 +124,30 @@ test('does not call Claude when there are no candidates', async () => {
 
   assert.deepEqual(await shortlist(claude, { candidates: [] }), []);
   assert.equal(claude.requests.length, 0);
+});
+
+test('a bad answer is retried once and the good answer is used', async () => {
+  const bad = reply([{ id: 999, why: 'A made up film.' }, THREE_PICKS[0], THREE_PICKS[1]]);
+  const claude = fakeClaude([bad, reply(THREE_PICKS)]);
+  const picks = await shortlist(claude);
+
+  assert.equal(claude.requests.length, 2);
+  assert.deepEqual(picks.map((pick) => pick.id), [3, 1, 2]);
+});
+
+test('gives up after two bad answers', async () => {
+  const claude = fakeClaude(reply(THREE_PICKS.slice(0, 1)));
+
+  await assert.rejects(shortlist(claude), /invalid shortlist/);
+  assert.equal(claude.requests.length, 2);
+});
+
+test('a rejected key is not retried', async () => {
+  const error = new Anthropic.AuthenticationError(401, {}, 'invalid', new Headers());
+  const claude = fakeClaude(error);
+
+  await assert.rejects(shortlist(claude), /ANTHROPIC_API_KEY/);
+  assert.equal(claude.requests.length, 1);
 });
 
 test('solo mode has no yours-or-mine label', async () => {
