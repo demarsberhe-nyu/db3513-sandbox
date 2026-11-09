@@ -63,6 +63,38 @@ function renderFilm(film) {
   return item;
 }
 
+function setUpNetflix(section, slot, profile) {
+  const count = profile.netflixTitleCount;
+  const buttonText = count > 0 ? 'Replace Netflix history' : 'Add Netflix history';
+  const label = field(section, 'netflix-label');
+  const fileInput = field(section, 'netflix-file');
+
+  label.textContent = buttonText;
+  field(section, 'netflix-status').textContent = count > 0
+    ? `${count} titles read. Anything you've watched won't be recommended.`
+    : "Upload NetflixViewingHistory.csv so movies you've watched there aren't recommended.";
+
+  fileInput.addEventListener('change', async () => {
+    if (fileInput.files.length === 0) return;
+    field(section, 'error').hidden = true;
+    label.textContent = 'Reading…';
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    try {
+      render(await sendProfiles(`/api/profiles/${slot}/netflix`, {
+        method: 'POST',
+        body: formData,
+      }));
+    } catch (error) {
+      showError(section, error.message);
+      label.textContent = buttonText;
+      fileInput.value = '';
+    }
+  });
+}
+
 function renderProfile(slot, profile) {
   const section = cloneTemplate('profile-template');
   field(section, 'heading').textContent = profile.name;
@@ -76,6 +108,8 @@ function renderProfile(slot, profile) {
     field(section, 'more').textContent = `and ${hiddenCount} more`;
     field(section, 'more').hidden = false;
   }
+
+  setUpNetflix(section, slot, profile);
 
   field(section, 'remove').addEventListener('click', async () => {
     render(await sendProfiles(`/api/profiles/${slot}`, { method: 'DELETE' }));

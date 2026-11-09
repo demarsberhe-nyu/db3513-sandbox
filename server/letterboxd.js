@@ -117,6 +117,7 @@ function summarizeProfile(profile) {
     watchedCount: profile.watched.length,
     watchlistCount: profile.watchlist.length,
     topRatedCount: profile.topRated.length,
+    netflixTitleCount: profile.netflixTitles?.length ?? 0,
     topRated: profile.topRated.slice(0, TOP_RATED_MINIMUM).map(({ name, year, rating }) => ({
       name,
       year,
