@@ -104,7 +104,8 @@ label {
   font-size: 14px;
 }
 
-input {
+input,
+select {
   display: block;
   width: 100%;
   min-height: 44px;
@@ -166,6 +167,53 @@ button:disabled {
   border: 0;
   opacity: 0;
 }
+
+.services {
+  margin: 0 0 16px;
+  padding: 0;
+  border: none;
+}
+
+.services legend {
+  padding: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.service {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.service input {
+  width: 20px;
+  min-height: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+}
+
+.film-note {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.attribution {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.attribution a { color: inherit; }
 
 button.quiet {
   padding: 10px 0;

@@ -4,6 +4,8 @@ const multer = require('multer');
 const { buildProfile, summarizeProfile } = require('./letterboxd');
 const { parseNetflixHistory } = require('./netflix');
 const { loadProfiles, saveProfiles } = require('./store');
+const { createTmdbClient } = require('./tmdb');
+const { buildCandidates, SERVICES, REGIONS } = require('./candidates');
 
 const PORT = process.env.PORT || 3000;
 const MAX_NAME_LENGTH = 40;
@@ -107,6 +109,44 @@ app.delete('/api/profiles/:slot', (req, res) => {
   profiles[slot] = null;
   saveProfiles(profiles);
   res.json({ profiles: summarizeAll(profiles) });
+});
+
+app.get('/api/options', (req, res) => {
+  res.json({
+    services: SERVICES.map(({ id, name }) => ({ id, name })),
+    regions: REGIONS,
+  });
+});
+
+app.post('/api/candidates', express.json(), async (req, res) => {
+  const { services: serviceIds, region } = req.body ?? {};
+  const profiles = loadProfiles();
+
+  if (!profiles.some(Boolean)) {
+    res.status(400).json({ error: 'Add a Letterboxd export first.' });
+    return;
+  }
+  if (!Array.isArray(serviceIds) || !SERVICES.some(({ id }) => serviceIds.includes(id))) {
+    res.status(400).json({ error: 'Pick at least one streaming service.' });
+    return;
+  }
+  if (!REGIONS.includes(region)) {
+    res.status(400).json({ error: 'Pick a region from the list.' });
+    return;
+  }
+  if (!process.env.TMDB_API_TOKEN) {
+    res.status(503).json({ error: 'TMDB_API_TOKEN is not set in .env yet.' });
+    return;
+  }
+
+  const tmdb = createTmdbClient(process.env.TMDB_API_TOKEN);
+  try {
+    res.json(await buildCandidates({ profiles, serviceIds, region, tmdb }));
+  } catch (error) {
+    res.status(502).json({ error: error.message });
+  } finally {
+    tmdb.saveCache();
+  }
 });
 
 // Turns upload problems, such as an oversized file, into a readable message.
