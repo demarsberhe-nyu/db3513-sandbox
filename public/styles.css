@@ -251,7 +251,7 @@ button.quiet {
   list-style: none;
 }
 
-.steps li { flex: 1; min-width: 0; }
+.steps li { flex: 1 1 auto; min-width: 0; }
 
 .step {
   display: flex;
@@ -275,6 +275,7 @@ button.quiet {
 }
 
 .step-number {
+  flex: none;
   display: inline-grid;
   place-items: center;
   width: 22px;
@@ -584,6 +585,11 @@ button.veto:hover { border-color: var(--accent); }
 @keyframes pulse {
   from { opacity: 1; }
   to { opacity: 0.5; }
+}
+
+@media (max-width: 360px) {
+  .steps { gap: 4px; }
+  .step { gap: 4px; font-size: 13px; }
 }
 
 @media (min-width: 760px) {
