@@ -140,7 +140,8 @@ async function buildShortlist({ candidates, people, mood, model, claude }) {
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       output_config: {
-        effort: 'medium',
+        // At medium, Claude sometimes skipped its reasoning and returned placeholder picks.
+        effort: 'high',
         format: { type: 'json_schema', schema: PICKS_SCHEMA },
       },
       system: systemPrompt(count),

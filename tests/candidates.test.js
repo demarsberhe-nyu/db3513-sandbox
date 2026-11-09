@@ -177,20 +177,38 @@ test('uses at most 15 top-rated films per person', async () => {
   assert.equal(tmdb.calls.recommendations.length, 15);
 });
 
-test('checks at most 100 candidates, with watchlist films first', async () => {
-  assert.equal(MAX_CANDIDATES_CHECKED, 100);
-  const onWatchlist = Array.from({ length: 95 }, (_, i) => ({ id: i + 1, title: `Listed ${i}`, year: '2000' }));
-  const others = Array.from({ length: 20 }, (_, i) => ({ id: 200 + i, title: `Other ${i}`, year: '2000' }));
-  const favorite = { id: 500, title: 'Favorite', year: '1999' };
-  const tmdb = fakeTmdb([...onWatchlist, ...others, favorite], { 500: others.map((m) => m.id) });
-  const people = [
+// A long watchlist, plus recommendations that all come from one favorite film.
+async function checkedCounts(watchlistSize, recommendationCount) {
+  const onWatchlist = Array.from({ length: watchlistSize }, (_, i) => ({ id: i + 1, title: `Listed ${i}`, year: '2000' }));
+  const others = Array.from({ length: recommendationCount }, (_, i) => ({ id: 1000 + i, title: `Other ${i}`, year: '2000' }));
+  const favorite = { id: 5000, title: 'Favorite', year: '1999' };
+  const tmdb = fakeTmdb([...onWatchlist, ...others, favorite], { 5000: others.map((m) => m.id) });
+  const { stats } = await run(tmdb, [
     person('Sam', {
       watchlist: onWatchlist.map((m) => film(m.title, m.year)),
       topRated: [film('Favorite', '1999')],
     }),
-  ];
-  const { stats } = await run(tmdb, people);
+  ]);
 
-  assert.equal(stats.checked, 100);
-  assert.equal(onWatchlist.filter((m) => tmdb.calls.details.includes(m.id)).length, 95);
+  return {
+    total: stats.checked,
+    watchlist: onWatchlist.filter((m) => tmdb.calls.details.includes(m.id)).length,
+    recommended: others.filter((m) => tmdb.calls.details.includes(m.id)).length,
+  };
+}
+
+test('never checks more than 100 candidates', () => {
+  assert.equal(MAX_CANDIDATES_CHECKED, 100);
+});
+
+test('a long watchlist leaves 40 checks for recommendations', async () => {
+  assert.deepEqual(await checkedCounts(95, 50), { total: 100, watchlist: 60, recommended: 40 });
+});
+
+test('unused recommendation checks go back to the watchlist', async () => {
+  assert.deepEqual(await checkedCounts(95, 20), { total: 100, watchlist: 80, recommended: 20 });
+});
+
+test('a short watchlist leaves its unused checks to recommendations', async () => {
+  assert.deepEqual(await checkedCounts(10, 120), { total: 100, watchlist: 10, recommended: 90 });
 });
