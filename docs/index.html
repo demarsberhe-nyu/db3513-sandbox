@@ -224,7 +224,7 @@
       <p><strong>Riskiest Assumption:</strong>Users will trust a shortlist of movies enough to pick one and press play, instead of going back to scrolling. If the recommendations feel random the user will go back to scrolling on streaming platforms, resulting in the app further extending the search process.</p>
       <p><strong>Simple Architecture:</strong>
         <ol>
-          <li>User Input: LetterboxdOne or two Letterboxd export files (CSV), the streaming services we share, and tonight's mood</li>
+          <li>User Input: Letterboxd export files (CSV), streaming services watch history, the streaming services we share, and tonight's mood</li>
           <li>Your App: App that reads the CSV files, identifies each person's highly rated films and watchlist, builds taste profile for the user, builds movie shortlist using taste profile data + current preferences (TMDB data will narrow down list to only include movies that are available on platforms the user is subscribed to)</li>
           <li>AI Model / Tool: TMDB API (movie details and where-to-watch data), Claude model to blend both taste profiles with tonight's mood, ranks the candidates, and writes a “why this pick” line</li>
           <li>Output: Today's Shortlist: Movie cards with posters, the “why” line, trailer, etc.</li>
@@ -236,11 +236,13 @@
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">Cumulative Build Spend</div>
-          <div class="stat-value">[Record actual spend]</div>
+          <div class="stat-value">≈ $1.15</div>
+          <div class="meta">Claude API calls during testing.</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
-          <div class="stat-value">[Not yet estimated]</div>
+          <div class="stat-value">≈ $0.05</div>
+          <div class="meta">Per six-film shortlist with Claude Opus 5.5. About $0.09 when a failed answer is retried.</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">User Evidence (Analytics from Build 2)</div>
@@ -262,9 +264,9 @@
         <h3>Build 1 · Intent.md & Throwaway Prototype (Due Nov 9)</h3>
         <ul>
           <li><strong>What shipped:</strong>Initial proof of concept and local prototype for the The Shortlist movie recommendation product.</li>
-          <li><strong>Things learned with AI:</strong> [What you learned from AI practice and Terminus Episodes 1 and 2.]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> 4 hours</li>
+          <li><strong>Things learned with AI:</strong> Test functionality with real time data early to verify. The first real run showed that a long watchlist crowded out taste-based picks.</li>
+          <li><strong>What broke / changed in PRD:</strong> The PRD now promises five or six picks instead of three. A ten-film version was tried first, but only 1 of 3 real runs succeeded.</li>
+          <li><strong>Cost & time this week:</strong> ≈ $1.15 in Claude API calls; 4 hours</li>
         </ul>
       </div>
 
