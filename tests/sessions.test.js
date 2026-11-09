@@ -112,7 +112,7 @@ test('sessions past their lifetime are deleted and recent ones are kept', () => 
 
 test('searches over the limit are turned away', async () => {
   const cookie = await newVisitor();
-  const search = () => send('/api/candidates', cookie, {
+  const search = () => send('/api/shortlist', cookie, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: '{}',
