@@ -214,7 +214,7 @@ function renderUpload(slot) {
     event.preventDefault();
     field(section, 'error').hidden = true;
     button.disabled = true;
-    button.textContent = 'Reading your export…';
+    button.textContent = 'Reading your films…';
 
     try {
       await finishRemoval();
@@ -283,6 +283,42 @@ function setUpNetflix(section, slot, profile) {
   });
 }
 
+function setUpDiary(section, slot, profile) {
+  const form = field(section, 'diary-form');
+  const button = field(section, 'diary-button');
+  const input = form.elements.username;
+  const username = profile.letterboxdUsername;
+
+  input.value = username ?? '';
+  button.textContent = username ? 'Update' : 'Connect';
+  field(section, 'diary-status').textContent = username
+    ? `Connected to ${username}. Recent diary entries are added each time you build a shortlist.`
+    : 'Add your username and new watches from your public diary are picked up automatically. Your watchlist still comes from the export.';
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    field(section, 'diary-error').hidden = true;
+    button.disabled = true;
+    button.textContent = 'Connecting…';
+
+    try {
+      const body = await api(`/api/profiles/${slot}/letterboxd`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: input.value }),
+      });
+      profiles = body.profiles;
+      renderPeople();
+    } catch (error) {
+      const message = field(section, 'diary-error');
+      message.textContent = error.message;
+      message.hidden = false;
+      button.disabled = false;
+      button.textContent = username ? 'Update' : 'Connect';
+    }
+  });
+}
+
 function renderProfile(slot, profile) {
   const section = cloneTemplate('profile-template');
   field(section, 'heading').textContent = profile.name;
@@ -296,6 +332,7 @@ function renderProfile(slot, profile) {
     field(section, 'more').hidden = false;
   }
 
+  setUpDiary(section, slot, profile);
   setUpNetflix(section, slot, profile);
   field(section, 'remove').addEventListener('click', () => startRemoval(slot));
   return section;

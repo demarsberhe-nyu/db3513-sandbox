@@ -96,14 +96,19 @@
           <input type="text" name="name" maxlength="40" autocomplete="off" required />
         </label>
         <label class="dropzone" data-field="dropzone">
-          <input type="file" name="files" accept=".zip,.csv" multiple required data-field="files" />
-          <span class="dropzone-title">Drop your Letterboxd export here</span>
+          <input type="file" name="files" accept=".zip,.csv" multiple data-field="files" />
+          <span class="dropzone-title">Drop your Letterboxd export here (optional)</span>
           <span class="dropzone-note" data-field="file-names">or click to choose the ZIP file</span>
         </label>
         <details class="help">
           <summary>How do I get my Letterboxd export?</summary>
           <p>On the Letterboxd website, open Settings, go to Data, and choose Export Your Data. You'll get a ZIP file. Upload it as it is.</p>
         </details>
+        <label>
+          Letterboxd username (optional)
+          <input type="text" name="username" maxlength="41" autocomplete="off" spellcheck="false" />
+          <span class="field-note">Reads your recent diary from your public profile. Add the export too for your full history and watchlist.</span>
+        </label>
         <p class="error" role="alert" data-field="error" hidden></p>
         <button type="submit">Add</button>
       </form>
@@ -131,6 +136,18 @@
         <summary>Top-rated films</summary>
         <ol class="films" data-field="films"></ol>
         <p class="more" data-field="more" hidden></p>
+      </details>
+      <details class="help">
+        <summary>Keep up with your diary (optional)</summary>
+        <p class="more" data-field="diary-status"></p>
+        <p class="error" role="alert" data-field="diary-error" hidden></p>
+        <form class="username-form" data-field="diary-form">
+          <label>
+            Letterboxd username
+            <input type="text" name="username" maxlength="41" autocomplete="off" spellcheck="false" required />
+          </label>
+          <button type="submit" class="secondary" data-field="diary-button">Connect</button>
+        </form>
       </details>
       <details class="help">
         <summary>Netflix history (optional)</summary>
