@@ -326,6 +326,26 @@ button.secondary {
   color: var(--text);
 }
 
+.field-note {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+/* Username and button sit on one row, and stack on narrow screens. */
+.username-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.username-form label {
+  flex: 1 1 200px;
+  margin: 0;
+}
+
 .hint {
   margin: 0 0 12px;
   color: var(--muted);

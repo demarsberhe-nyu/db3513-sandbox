@@ -2,7 +2,8 @@ const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const Anthropic = require('@anthropic-ai/sdk');
-const { buildProfile, summarizeProfile } = require('./letterboxd');
+const { buildProfile, mergeDiary, summarizeProfile } = require('./letterboxd');
+const { normalizeUsername, fetchDiary } = require('./letterboxd-rss');
 const { parseNetflixHistory } = require('./netflix');
 const { loadProfiles, saveProfiles, deleteExpiredSessions } = require('./store');
 const { withSession, SESSION_LIFETIME_MS } = require('./sessions');
@@ -82,7 +83,7 @@ app.get('/api/profiles', (req, res) => {
   res.json({ profiles: summarizeAll(loadProfiles(req.sessionId)) });
 });
 
-app.post('/api/profiles/:slot', limitUploads, upload.array('files'), (req, res) => {
+app.post('/api/profiles/:slot', limitUploads, upload.array('files'), async (req, res) => {
   const slot = parseSlot(req, res);
   if (slot === null) return;
 
@@ -91,16 +92,44 @@ app.post('/api/profiles/:slot', limitUploads, upload.array('files'), (req, res) 
     res.status(400).json({ error: `Enter a name of 1 to ${MAX_NAME_LENGTH} characters.` });
     return;
   }
-  if (!req.files || req.files.length === 0) {
-    res.status(400).json({ error: 'Choose your Letterboxd ZIP or CSV files first.' });
+  const hasFiles = Boolean(req.files?.length);
+  const usernameInput = (req.body.username || '').trim();
+  if (!hasFiles && !usernameInput) {
+    res.status(400).json({ error: 'Add your Letterboxd export, your Letterboxd username, or both.' });
     return;
   }
 
-  let profile;
-  try {
-    profile = buildProfile(name, req.files);
-  } catch (error) {
-    res.status(400).json({ error: `Couldn't read that export. ${error.message}` });
+  // Without an export, the profile starts empty and comes only from the diary feed.
+  let profile = { name, ratings: [], watched: [], watchlist: [], topRated: [] };
+  if (hasFiles) {
+    try {
+      profile = buildProfile(name, req.files);
+    } catch (error) {
+      res.status(400).json({ error: `Couldn't read that export. ${error.message}` });
+      return;
+    }
+  }
+
+  // The username can also be added later from the profile card.
+  if (usernameInput) {
+    try {
+      const username = normalizeUsername(usernameInput);
+      profile = {
+        ...mergeDiary(profile, await fetchDiary(username)),
+        letterboxdUsername: username,
+        diarySyncedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+  }
+
+  // With no export there's no watchlist, so picks rely on rated films from the diary.
+  if (!hasFiles && profile.ratings.length === 0) {
+    res.status(400).json({
+      error: 'No rated films found. Rate a few films in your Letterboxd diary, or add your export.',
+    });
     return;
   }
 
@@ -116,7 +145,7 @@ app.post('/api/profiles/:slot/netflix', limitUploads, upload.single('file'), (re
 
   const profiles = loadProfiles(req.sessionId);
   if (!profiles[slot]) {
-    res.status(404).json({ error: 'Add a Letterboxd export for this person first.' });
+    res.status(404).json({ error: 'Add this person first.' });
     return;
   }
   if (!req.file) {
@@ -134,6 +163,49 @@ app.post('/api/profiles/:slot/netflix', limitUploads, upload.single('file'), (re
   saveProfiles(profiles, req.sessionId);
   res.json({ profiles: summarizeAll(profiles) });
 });
+
+// Links a Letterboxd username so recent diary entries are added without a new export.
+app.post('/api/profiles/:slot/letterboxd', limitUploads, express.json(), async (req, res) => {
+  const slot = parseSlot(req, res);
+  if (slot === null) return;
+
+  const profiles = loadProfiles(req.sessionId);
+  if (!profiles[slot]) {
+    res.status(404).json({ error: 'Add this person first.' });
+    return;
+  }
+
+  let username;
+  let diary;
+  try {
+    username = normalizeUsername(req.body?.username);
+    diary = await fetchDiary(username);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+
+  profiles[slot] = {
+    ...mergeDiary(profiles[slot], diary),
+    letterboxdUsername: username,
+    diarySyncedAt: new Date().toISOString(),
+  };
+  saveProfiles(profiles, req.sessionId);
+  res.json({ profiles: summarizeAll(profiles) });
+});
+
+// A feed that can't be reached leaves the profile as it was, so the shortlist still runs.
+async function refreshDiaries(profiles) {
+  return Promise.all(profiles.map(async (profile) => {
+    if (!profile?.letterboxdUsername) return profile;
+    try {
+      const diary = await fetchDiary(profile.letterboxdUsername);
+      return { ...mergeDiary(profile, diary), diarySyncedAt: new Date().toISOString() };
+    } catch (error) {
+      return profile;
+    }
+  }));
+}
 
 app.delete('/api/profiles/:slot', (req, res) => {
   const slot = parseSlot(req, res);
@@ -155,10 +227,10 @@ app.get('/api/options', (req, res) => {
 
 app.post('/api/shortlist', limitSearches, limitDailyShortlists, express.json(), async (req, res) => {
   const { services: serviceIds, region, mood } = req.body ?? {};
-  const profiles = loadProfiles(req.sessionId);
+  let profiles = loadProfiles(req.sessionId);
 
   if (!profiles.some(Boolean)) {
-    res.status(400).json({ error: 'Add a Letterboxd export first.' });
+    res.status(400).json({ error: 'Add a person first.' });
     return;
   }
   if (!Array.isArray(serviceIds) || !SERVICES.some(({ id }) => serviceIds.includes(id))) {
@@ -181,6 +253,9 @@ app.post('/api/shortlist', limitSearches, limitDailyShortlists, express.json(), 
     res.status(503).json({ error: 'ANTHROPIC_API_KEY and ANTHROPIC_MODEL must be set in .env.' });
     return;
   }
+
+  profiles = await refreshDiaries(profiles);
+  saveProfiles(profiles, req.sessionId);
 
   const tmdb = createTmdbClient(process.env.TMDB_API_TOKEN);
   try {

@@ -113,6 +113,18 @@ function buildProfile(name, uploads) {
   return { name, ratings, watched, watchlist, topRated: pickTopRated(ratings) };
 }
 
+// Adds diary entries from the RSS feed to a profile built from an export.
+// A newer rating replaces an older one, and logging a film takes it off the watchlist.
+function mergeDiary(profile, diary) {
+  const stripRating = ({ rating, ...film }) => film;
+  const ratings = dedupeFilms([...profile.ratings, ...diary.filter((film) => film.rating > 0)]);
+  const watched = dedupeFilms([...profile.watched, ...diary.map(stripRating)]);
+  const logged = new Set(diary.map(filmKey));
+  const watchlist = profile.watchlist.filter((film) => !logged.has(filmKey(film)));
+
+  return { ...profile, ratings, watched, watchlist, topRated: pickTopRated(ratings) };
+}
+
 // The small version of a profile that the browser needs for the setup screen.
 function summarizeProfile(profile) {
   return {
@@ -122,6 +134,8 @@ function summarizeProfile(profile) {
     watchlistCount: profile.watchlist.length,
     topRatedCount: profile.topRated.length,
     netflixTitleCount: profile.netflixTitles?.length ?? 0,
+    letterboxdUsername: profile.letterboxdUsername ?? null,
+    diarySyncedAt: profile.diarySyncedAt ?? null,
     topRated: profile.topRated.slice(0, TOP_RATED_MINIMUM).map(({ name, year, rating }) => ({
       name,
       year,
@@ -130,4 +144,4 @@ function summarizeProfile(profile) {
   };
 }
 
-module.exports = { buildProfile, summarizeProfile, filmKey };
+module.exports = { buildProfile, mergeDiary, summarizeProfile, filmKey };
